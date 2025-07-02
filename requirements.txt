@@ -1,0 +1,27 @@
+# Core data manipulation and analysis
+pandas>=1.5.0
+numpy>=1.21.0
+
+# Machine learning
+scikit-learn>=1.1.0
+xgboost>=1.6.0
+# Alternative: lightgbm>=3.3.0  # Uncomment if XGBoost has issues
+
+# Model persistence
+joblib>=1.2.0
+
+# Excel file support
+openpyxl>=3.0.0
+xlrd>=2.0.0
+
+# Streamlit web app
+streamlit>=1.28.0
+plotly>=5.0.0
+
+# Date and time handling (usually included with Python)
+# datetime - built-in module
+
+# Optional: For better performance and additional functionality
+# scipy>=1.9.0
+# matplotlib>=3.5.0  # if you want to add plotting later
+# seaborn>=0.11.0    # if you want to add plotting later
