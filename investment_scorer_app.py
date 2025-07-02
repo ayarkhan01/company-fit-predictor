@@ -145,7 +145,7 @@ def main():
     st.sidebar.title("📊 Navigation")
     mode = st.sidebar.selectbox(
         "Choose Scoring Mode",
-        ["Single Company Analysis", "Batch File Processing", "Portfolio Dashboard"]
+        ["Single Company", "Multiple Companies"]
     )
     
     # Check if model exists
@@ -156,15 +156,13 @@ def main():
         st.error("❌ Model not found! Please run `train_model.py` first.")
         st.stop()
     
-    if mode == "Single Company Analysis":
+    if mode == "Single Company":
         single_company_interface()
-    elif mode == "Batch File Processing":
+    elif mode == "Multiple Companies":
         batch_processing_interface()
-    else:
-        portfolio_dashboard()
 
 def single_company_interface():
-    st.header("🏢 Single Company Analysis")
+    st.header("🏢 Single Company")
     
     # Two columns for input
     col1, col2 = st.columns(2)
@@ -197,6 +195,12 @@ def single_company_interface():
         
     with col2:
         st.subheader("🏛️ Company Details")
+        
+        company_name = st.text_input(
+            "Company Name",
+            value="Example Corp",
+            help="Name of the company"
+        )
         
         headquarters = st.text_input(
             "Headquarters",
@@ -245,7 +249,7 @@ def single_company_interface():
         )
     
     # Analyze button
-    if st.button("🎯 Analyze Investment Fit", type="primary", use_container_width=True):
+    if st.button("🎯 Get Investment Score", type="primary", use_container_width=True):
         # Prepare company data
         company_data = {
             'Employee Estimate': employee_estimate,
@@ -264,49 +268,30 @@ def single_company_interface():
         }
         
         # Predict score
-        with st.spinner("Analyzing company fit..."):
+        with st.spinner("Calculating score..."):
             try:
                 score = predict_single_company(company_data)
                 
-                # Display results
+                # Display results - just company name and score
+                st.success("✅ Score calculated successfully!")
+                
+                # Simple result display
                 col1, col2, col3 = st.columns([1, 2, 1])
-                
                 with col2:
-                    # Score gauge
-                    fig = create_score_gauge(score)
-                    st.plotly_chart(fig, use_container_width=True)
-                
-                # Recommendation
-                rec = get_recommendation(score)
-                st.markdown(f'''
-                <div class="recommendation {rec['class']}">
-                    <h3>{rec['title']}</h3>
-                    <p>{rec['text']}</p>
-                    <p><strong>Recommended Action:</strong> {rec['action']}</p>
-                </div>
-                ''', unsafe_allow_html=True)
-                
-                # Detailed metrics
-                col1, col2, col3, col4 = st.columns(4)
-                
-                with col1:
-                    st.metric("Investment Score", f"{score}/10", f"{score-5:+.1f} vs avg")
-                
-                with col2:
-                    company_age = datetime.now().year - year_founded
-                    st.metric("Company Age", f"{company_age} years")
-                
-                with col3:
-                    st.metric("Employee Count", f"{employee_estimate:,}")
-                
-                with col4:
-                    st.metric("Total Funding", f"${total_funding:.1f}M")
+                    st.markdown(f"""
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                padding: 2rem; border-radius: 15px; text-align: center; margin: 2rem 0;">
+                        <h2 style="color: white; margin: 0;">{company_name}</h2>
+                        <h1 style="color: white; font-size: 3rem; margin: 0.5rem 0;">{score}/10</h1>
+                        <p style="color: rgba(255,255,255,0.9); margin: 0;">Investment Score</p>
+                    </div>
+                    """, unsafe_allow_html=True)
                 
             except Exception as e:
-                st.error(f"Error analyzing company: {e}")
+                st.error(f"Error calculating score: {e}")
 
 def batch_processing_interface():
-    st.header("📁 Batch File Processing")
+    st.header("📁 Multiple Companies")
     
     st.info("Upload an Excel or CSV file with multiple companies to score them all at once.")
     
@@ -340,64 +325,28 @@ def batch_processing_interface():
                     # Process file
                     results = predict_companies_from_file(temp_file)
                     
-                    # Display results
-                    st.subheader("📊 Scoring Results")
-                    
-                    # Summary metrics
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    with col1:
-                        st.metric("Total Companies", len(results))
-                    
-                    with col2:
-                        high_fit = len(results[results['Investment_Score'] >= 8])
-                        st.metric("High Fit (8-10)", high_fit, f"{high_fit/len(results)*100:.1f}%")
-                    
-                    with col3:
-                        medium_fit = len(results[(results['Investment_Score'] >= 6) & (results['Investment_Score'] < 8)])
-                        st.metric("Medium Fit (6-8)", medium_fit, f"{medium_fit/len(results)*100:.1f}%")
-                    
-                    with col4:
-                        avg_score = results['Investment_Score'].mean()
-                        st.metric("Average Score", f"{avg_score:.1f}")
-                    
-                    # Score distribution
-                    fig = px.histogram(
-                        results, 
-                        x='Investment_Score', 
-                        nbins=20,
-                        title="Score Distribution",
-                        color_discrete_sequence=['#1f77b4']
-                    )
-                    fig.update_layout(
-                        xaxis_title="Investment Score",
-                        yaxis_title="Number of Companies"
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Top companies
-                    st.subheader("🏆 Top Investment Candidates")
-                    top_companies = results.head(10)
+                    # Display results - just company and score
+                    st.subheader("📊 Company Scores")
                     
                     # Clean display - just company name and score
                     display_columns = []
-                    if 'Name' in top_companies.columns:
+                    if 'Name' in results.columns:
                         display_columns.append('Name')
-                    elif 'Company' in top_companies.columns:
+                    elif 'Company' in results.columns:
                         display_columns.append('Company')
-                    elif 'Company Name' in top_companies.columns:
+                    elif 'Company Name' in results.columns:
                         display_columns.append('Company Name')
                     
                     display_columns.append('Investment_Score')
                     
                     if display_columns and len(display_columns) == 2:
-                        clean_df = top_companies[display_columns].copy()
+                        clean_df = results[display_columns].copy()
                         clean_df.columns = ['Company', 'Score']
                     else:
                         # Fallback if no company name column found
-                        clean_df = top_companies[['Investment_Score']].copy()
+                        clean_df = results[['Investment_Score']].copy()
                         clean_df.columns = ['Score']
-                        clean_df.insert(0, 'Company', f'Company {clean_df.index + 1}')
+                        clean_df.insert(0, 'Company', [f'Company {i+1}' for i in range(len(clean_df))])
                     
                     # Style the dataframe with clean formatting
                     def style_score_row(row):
@@ -420,7 +369,7 @@ def batch_processing_interface():
                     st.dataframe(styled_df, use_container_width=True, hide_index=True)
                     
                     # Download results
-                    csv = results.to_csv(index=False)
+                    csv = clean_df.to_csv(index=False)
                     st.download_button(
                         label="📥 Download Results as CSV",
                         data=csv,
